@@ -3,6 +3,7 @@
 > **Desafio Técnico Beyond the Bytes** · Processo Seletivo  
 > Solução completa com arquitetura limpa em **NestJS** e **React (TypeScript)**, integração com **Google Gemini** em tempo real, estrita observância das regras de negócio do Service Desk (**Anexo A**), **Console do Analista (N1/N2)** e **Transparência Cognitiva de Decisões**.
 
+REPOSITÓRIO FRONTEND: https://github.com/DanielAzevedoM/nexo-test-backend
 ---
 
 ## 📋 Sumário
