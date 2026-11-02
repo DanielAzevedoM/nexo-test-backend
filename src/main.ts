@@ -11,12 +11,18 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // CORS
+  const frontendEnv = process.env.FRONTEND_URL?.trim();
+  const allowedOrigins = [
+    frontendEnv,
+    frontendEnv && !frontendEnv.startsWith('http') ? `https://${frontendEnv}` : null,
+    frontendEnv && !frontendEnv.startsWith('http') ? `http://${frontendEnv}` : null,
+    'https://nexoassist.danielazevedom.com.br',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ].filter(Boolean) as string[];
+
   app.enableCors({
-    origin: [
-      process.env.FRONTEND_URL,
-      'http://localhost:5173',
-      'http://localhost:3000',
-    ].filter(Boolean) as string[],
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     credentials: true,
   });
