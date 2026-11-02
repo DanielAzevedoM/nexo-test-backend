@@ -28,13 +28,14 @@ import { runSeed } from './scripts/seed';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const dbType = configService.get<string>('DB_TYPE', 'mysql');
+        const rawDbType = configService.get<string>('DB_TYPE', 'mysql')?.trim().toLowerCase();
+        const isSqlite = rawDbType === 'sqlite';
 
-        if (dbType === 'mysql') {
+        if (!isSqlite) {
           return {
             type: 'mysql',
             host: configService.get<string>('DB_HOST', 'localhost'),
-            port: configService.get<number>('DB_PORT', 3306),
+            port: Number(configService.get<number>('DB_PORT', 3306)),
             username: configService.get<string>('DB_USERNAME', 'root'),
             password: configService.get<string>('DB_PASSWORD', 'root'),
             database: configService.get<string>('DB_DATABASE', 'nexo_assist'),
