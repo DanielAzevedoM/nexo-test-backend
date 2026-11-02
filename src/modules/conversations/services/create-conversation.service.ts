@@ -28,13 +28,26 @@ export class CreateConversationService {
           { tenantId, userId, status: ConversationStatus.IN_ATTENDANCE },
         ],
         order: { updatedAt: 'DESC' },
-        relations: ['messages', 'user', 'relatedTicket'],
+        relations: ['user', 'relatedTicket'],
       });
 
       if (existingActive) {
-        this.logger.log(`🔄 Resumed existing conversation ${existingActive.id} for user ${userId}`);
+        existingActive.messages = await this.messageRepo.find({
+          where: { conversationId: existingActive.id },
+          order: { createdAt: 'ASC', id: 'ASC' },
+          relations: ['decision'],
+        });
+        this.logger.log(
+          `🔄 Resumed existing conversation ${existingActive.id} with ${existingActive.messages.length} messages for user ${userId}`,
+        );
         return existingActive;
       }
+    } else {
+      // Ao forçar nova conversa, encerra conversas anteriores WITH_AGENT do mesmo usuário
+      await this.conversationRepo.update(
+        { tenantId, userId, status: ConversationStatus.WITH_AGENT },
+        { status: ConversationStatus.CLOSED, agentPaused: true },
+      );
     }
 
     // Cria nova conversa
@@ -44,7 +57,7 @@ export class CreateConversationService {
       status: ConversationStatus.WITH_AGENT,
       relatedTicketId,
       agentPaused: false,
-      messageCount: 0,
+      messageCount: 1,
       lastMessageAt: new Date(),
     });
 
@@ -54,7 +67,8 @@ export class CreateConversationService {
     const welcomeMessage = this.messageRepo.create({
       conversationId: conversation.id,
       sender: MessageSender.AGENT,
-      content: 'Olá! Sou o Nexo Assist, seu assistente do service desk de TI. Descreva o que está acontecendo e eu consulto seus chamados, busco soluções na central de ajuda ou chamo um analista se precisar.',
+      content:
+        'Olá! Sou o Nexo Assist, seu assistente do service desk de TI. Descreva o que está acontecendo e eu consulto seus chamados, busco soluções na central de ajuda ou chamo um analista se precisar.',
       actions: ['iniciou o atendimento'],
       metadata: {
         quickReplies: [
@@ -70,6 +84,9 @@ export class CreateConversationService {
 
     this.logger.log(`✨ Created new conversation ${conversation.id} for user ${userId}`);
 
-    return conversation;
+    return {
+      ...conversation,
+      messages: [welcomeMessage],
+    };
   }
 }

@@ -164,6 +164,56 @@ export class ProcessAgentMessageService {
       }
     }
 
+    // 2.15. Tratamento imediato de Saudações (Olá, Oi, Bom dia, Boa tarde)
+    const normalizedGreeting = dto.message.toLowerCase().trim().replace(/[!.,?]/g, '');
+    const isPureGreeting = [
+      'ola',
+      'olá',
+      'oi',
+      'oie',
+      'opa',
+      'bom dia',
+      'boa tarde',
+      'boa noite',
+      'ola tudo bem',
+      'olá tudo bem',
+      'oi tudo bem',
+    ].includes(normalizedGreeting);
+
+    if (isPureGreeting) {
+      const reply = this.messageRepo.create({
+        conversationId: conversation.id,
+        sender: MessageSender.AGENT,
+        content:
+          'Olá! Como posso ajudar você hoje? Descreva o que está acontecendo e eu consulto seus chamados, busco soluções na central de ajuda ou chamo um analista se precisar.',
+        actions: ['iniciou o atendimento'],
+        metadata: {
+          quickReplies: [
+            'Meu notebook não conecta na VPN',
+            'Qual o status do meu chamado?',
+            'Preciso de um novo equipamento',
+            'Falar com um analista',
+          ],
+        },
+      });
+      await this.messageRepo.save(reply);
+
+      const decision = await this.saveDecision(
+        reply.id,
+        conversation.id,
+        'GREETING',
+        100,
+        'Saudação inicial identificada. O assistente respondeu acolhendo o colaborador e oferecendo as opções de atendimento do service desk.',
+        ['Escopo: Acolhimento e apresentação das capacidades de atendimento de TI (Anexo A)'],
+        [],
+        Date.now() - startTime,
+      );
+      (reply as any).decision = decision;
+
+      await this.conversationRepo.save(conversation);
+      return { userMessage, agentMessage: reply, conversation };
+    }
+
     // 2.2. Execução via Google Gemini AI (quando configurada GEMINI_API_KEY)
     if (this.geminiAgentService.isAvailable()) {
       try {

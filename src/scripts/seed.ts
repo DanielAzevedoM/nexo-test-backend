@@ -363,6 +363,8 @@ export async function runSeed(dataSource: DataSource) {
   await msgRepo.createQueryBuilder().delete().execute();
   await convRepo.createQueryBuilder().delete().execute();
 
+  const minutesAgo = (m: number) => new Date(now.getTime() - m * 60 * 1000);
+
   // 1. Usuário Teste (teste@nexo.com.br) - Conversa limpa inicial pronta para o avaliador interagir
   const convTeste = convRepo.create({
     tenantId: 'nexo-corp',
@@ -370,7 +372,7 @@ export async function runSeed(dataSource: DataSource) {
     status: ConversationStatus.WITH_AGENT,
     agentPaused: false,
     messageCount: 1,
-    lastMessageAt: new Date(),
+    lastMessageAt: minutesAgo(5),
   });
   await convRepo.save(convTeste);
 
@@ -388,6 +390,7 @@ export async function runSeed(dataSource: DataSource) {
         'Falar com um analista',
       ],
     },
+    createdAt: minutesAgo(5),
   });
   await msgRepo.save(testeWelcome);
 
@@ -398,11 +401,11 @@ export async function runSeed(dataSource: DataSource) {
     status: ConversationStatus.WAITING_HUMAN,
     agentPaused: true,
     relatedTicketId: savedTickets['INC-20311']?.id,
-    transferReason: 'Transferida · INC-20311',
+    transferReason: 'Transferida · INC-20311 (SLA vencido)',
     transferSummary:
-      'Chamado INC-20311 (Notebook lento após atualização do Windows) sem atualização há 5 dias (prazo vencido). A usuária solicitou transferência para analista humano.',
+      'Chamado INC-20311 (Notebook lento após atualização do Windows) sem atualização há 5 dias (prazo de 3 dias úteis vencido). A usuária solicitou transferência para analista humano.',
     messageCount: 6,
-    lastMessageAt: daysAgo(0),
+    lastMessageAt: minutesAgo(29),
   });
   await convRepo.save(convAna);
 
@@ -411,7 +414,7 @@ export async function runSeed(dataSource: DataSource) {
       conversationId: convAna.id,
       sender: MessageSender.USER,
       content: 'Qual o status do meu chamado?',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(35),
     },
     {
       conversationId: convAna.id,
@@ -446,20 +449,20 @@ export async function runSeed(dataSource: DataSource) {
           },
         ],
       },
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(34),
     },
     {
       conversationId: convAna.id,
       sender: MessageSender.USER,
       content: 'INC-20311 · Notebook lento após atualização',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(32),
     },
     {
       conversationId: convAna.id,
       sender: MessageSender.AGENT,
       content:
-        'Está sem atualização há 5 dias, acima do prazo de 3 dias úteis para prioridade média. Quer que eu chame um analista?',
-      actions: ['consultou o INC-20311', 'calculou o prazo'],
+        'O chamado INC-20311 está sem atualização há 5 dias, acima do prazo de 3 dias úteis para prioridade média. Gostaria que eu transferisse para um analista?',
+      actions: ['consultou o INC-20311', 'calculou o prazo (SLA vencido)'],
       metadata: {
         ticketCard: {
           id: savedTickets['INC-20311']?.id,
@@ -477,21 +480,21 @@ export async function runSeed(dataSource: DataSource) {
         },
         quickReplies: ['Falar com um analista', 'Adicionar informação', 'Não, obrigado'],
       },
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(31),
     },
     {
       conversationId: convAna.id,
       sender: MessageSender.USER,
       content: 'Está parado há 5 dias. Quero falar com um analista por favor.',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(30),
     },
     {
       conversationId: convAna.id,
       sender: MessageSender.AGENT,
       content:
-        'Com certeza, Ana. Transferi sua conversa para a fila de atendimento humano. O analista terá acesso a todo o histórico e ao chamado INC-20311.',
-      actions: ['transferiu para analista'],
-      createdAt: daysAgo(0),
+        'Com certeza, Ana. Transferi sua conversa para a fila de atendimento humano com prioridade devido ao SLA vencido. O analista receberá todo o histórico e dará continuidade.',
+      actions: ['transferiu para analista humano'],
+      createdAt: minutesAgo(29),
     },
   ];
 
@@ -507,11 +510,11 @@ export async function runSeed(dataSource: DataSource) {
     status: ConversationStatus.WAITING_HUMAN,
     agentPaused: true,
     relatedTicketId: savedTickets['REQ-10450']?.id,
-    transferReason: 'Transferida · contato em 25 min',
+    transferReason: 'Transferida · Urgência Comercial',
     transferSummary:
-      'Usuária precisa de liberação emergencial do SAP SD para fechamento de vendas às 17h. Caso de alta prioridade com impacto na equipe.',
-    messageCount: 5,
-    lastMessageAt: daysAgo(0),
+      'Usuária precisa de liberação emergencial do SAP SD para fechamento de vendas às 17h. Caso de alta prioridade com impacto em toda a equipe comercial.',
+    messageCount: 6,
+    lastMessageAt: minutesAgo(19),
   });
   await convRepo.save(convCarla);
 
@@ -520,7 +523,7 @@ export async function runSeed(dataSource: DataSource) {
       conversationId: convCarla.id,
       sender: MessageSender.USER,
       content: 'Preciso de acesso ao SAP ainda hoje',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(25),
     },
     {
       conversationId: convCarla.id,
@@ -531,28 +534,36 @@ export async function runSeed(dataSource: DataSource) {
       metadata: {
         quickReplies: ['Módulo SD (Vendas)', 'Módulo FI (Financeiro)', 'Não sei o módulo'],
       },
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(24),
     },
     {
       conversationId: convCarla.id,
       sender: MessageSender.USER,
       content:
         'Preciso do módulo SD para emitir os contratos comerciais do trimestre que encerram hoje às 17h. Afeta o time todo de vendas.',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(22),
     },
     {
       conversationId: convCarla.id,
       sender: MessageSender.AGENT,
       content:
-        'Identifiquei que esta requisição tem impacto crítico nas operações comerciais de hoje. Vou transferir seu atendimento diretamente para um analista de Suporte liberar o perfil de emergência.',
+        'Identifiquei que esta requisição tem impacto crítico nas operações comerciais de hoje. Vou transferir seu atendimento diretamente para a fila de analistas de Suporte liberar o perfil de emergência.',
       actions: ['classificou prioridade: Alta', 'transferiu para analista'],
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(21),
     },
     {
       conversationId: convCarla.id,
       sender: MessageSender.USER,
-      content: 'Muito obrigada, estou aguardando o contato do analista.',
-      createdAt: daysAgo(0),
+      content: 'Muito obrigada, fico no aguardo por aqui!',
+      createdAt: minutesAgo(20),
+    },
+    {
+      conversationId: convCarla.id,
+      sender: MessageSender.AGENT,
+      content:
+        'Perfeito, Carla! Notificação enviada à equipe de analistas. Você será atendida em instantes.',
+      actions: ['notificou analistas'],
+      createdAt: minutesAgo(19),
     },
   ];
 
@@ -570,9 +581,9 @@ export async function runSeed(dataSource: DataSource) {
     relatedTicketId: savedTickets['INC-20410']?.id,
     transferReason: 'Agent pediu ajuda · confiança 41%',
     transferSummary:
-      'Erro de handshake SSL em microsserviços no Kubernetes após renovação de certificados pela infraestrutura. O agente não possui base suficiente para orientar com segurança.',
-    messageCount: 4,
-    lastMessageAt: daysAgo(0),
+      'Erro de handshake SSL em microsserviços no Kubernetes após renovação de certificados pela infraestrutura. O agente não possui base suficiente para orientar com segurança (confiança 41%).',
+    messageCount: 5,
+    lastMessageAt: minutesAgo(40),
   });
   await convRepo.save(convBruno);
 
@@ -581,7 +592,7 @@ export async function runSeed(dataSource: DataSource) {
       conversationId: convBruno.id,
       sender: MessageSender.USER,
       content: 'Estou tendo um erro de handshake SSL e timeout no endpoint interno do Kubernetes',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(45),
     },
     {
       conversationId: convBruno.id,
@@ -589,21 +600,27 @@ export async function runSeed(dataSource: DataSource) {
       content:
         'Consultei nossa central de ajuda sobre certificados SSL e conectividade interna, mas não encontrei um procedimento homologado para erros de handshake SSL no cluster de homologação.',
       actions: ['buscou na central de ajuda', 'avaliou confiança: 41%'],
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(44),
     },
     {
       conversationId: convBruno.id,
       sender: MessageSender.USER,
-      content: 'Os certificados foram renovados hoje de manhã pelo time de infra. Pode verificar?',
-      createdAt: daysAgo(0),
+      content: 'Os certificados foram renovados hoje de manhã pelo time de infra. Pode transferir para o suporte N2?',
+      createdAt: minutesAgo(42),
     },
     {
       conversationId: convBruno.id,
       sender: MessageSender.AGENT,
       content:
-        'Não tenho segurança técnica suficiente sobre as novas configurações de certificados para orientá-lo sem risco de indisponibilidade. Vou transferir esta conversa diretamente para um analista de Suporte N2.',
+        'Com certeza, Bruno. Como envolve configurações técnicas de cluster fora da base do assistente (confiança 41%), transferi sua conversa diretamente para o time de Suporte N2/DevOps.',
       actions: ['insegurança do agent (41%)', 'transferiu para analista N2'],
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(41),
+    },
+    {
+      conversationId: convBruno.id,
+      sender: MessageSender.USER,
+      content: 'Perfeito, aguardo o retorno do analista N2. Obrigado!',
+      createdAt: minutesAgo(40),
     },
   ];
 
@@ -621,8 +638,8 @@ export async function runSeed(dataSource: DataSource) {
     assignedAnalystId: analista.id,
     transferReason: 'Transferida · Equipamento defeituoso',
     transferSummary: 'Mouse sem fio parou de funcionar mesmo trocando as pilhas e portas USB.',
-    messageCount: 6,
-    lastMessageAt: daysAgo(0),
+    messageCount: 7,
+    lastMessageAt: minutesAgo(46),
   });
   await convRepo.save(convDiego);
 
@@ -631,20 +648,20 @@ export async function runSeed(dataSource: DataSource) {
       conversationId: convDiego.id,
       sender: MessageSender.USER,
       content: 'Oi, meu mouse sem fio parou de funcionar e a pilha não é o problema.',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(60),
     },
     {
       conversationId: convDiego.id,
       sender: MessageSender.AGENT,
       content: 'Você já tentou testar o receptor em outra porta USB ou reiniciar o notebook?',
       actions: ['buscou na central de ajuda'],
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(59),
     },
     {
       conversationId: convDiego.id,
       sender: MessageSender.USER,
       content: 'Sim, testei em duas portas diferentes e reiniciei. Nada de sinal.',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(57),
     },
     {
       conversationId: convDiego.id,
@@ -652,20 +669,27 @@ export async function runSeed(dataSource: DataSource) {
       content:
         'Compreendido. Como o problema físico persiste, vou transferir para a equipe de Service Desk providenciar a troca do equipamento.',
       actions: ['transferiu para analista'],
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(56),
     },
     {
       conversationId: convDiego.id,
       sender: MessageSender.ANALYST,
       content:
         'Olá Diego! Analista Teste assumiu seu atendimento. Já separei um kit novo de mouse e teclado sem fio no estoque de TI (sala 302). Pode passar aqui para retirar até as 18h!',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(50),
     },
     {
       conversationId: convDiego.id,
       sender: MessageSender.USER,
-      content: 'Maravilha! Vou passar aí agora mesmo, muito obrigado!',
-      createdAt: daysAgo(0),
+      content: 'Maravilha! Vou passar aí agora mesmo para retirar, muito obrigado!',
+      createdAt: minutesAgo(48),
+    },
+    {
+      conversationId: convDiego.id,
+      sender: MessageSender.ANALYST,
+      content:
+        'Combinado, Diego! Chamado atualizado e kit reservado no seu nome. Tenha um ótimo dia de trabalho!',
+      createdAt: minutesAgo(46),
     },
   ];
 
@@ -680,8 +704,8 @@ export async function runSeed(dataSource: DataSource) {
     userId: fabio.id,
     status: ConversationStatus.WITH_AGENT,
     agentPaused: false,
-    messageCount: 3,
-    lastMessageAt: daysAgo(0),
+    messageCount: 4,
+    lastMessageAt: minutesAgo(71),
   });
   await convRepo.save(convFabio);
 
@@ -690,7 +714,7 @@ export async function runSeed(dataSource: DataSource) {
       conversationId: convFabio.id,
       sender: MessageSender.USER,
       content: 'Como faço para configurar o e-mail corporativo no celular?',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(75),
     },
     {
       conversationId: convFabio.id,
@@ -701,13 +725,21 @@ export async function runSeed(dataSource: DataSource) {
       metadata: {
         quickReplies: ['Consegui configurar', 'Apareceu erro de autenticação', 'Falar com analista'],
       },
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(74),
     },
     {
       conversationId: convFabio.id,
       sender: MessageSender.USER,
-      content: 'Consegui baixar pelo portal, vou configurar agora, valeu!',
-      createdAt: daysAgo(0),
+      content: 'Deu super certo! Consegui autenticar pelo aplicativo e sincronizou tudo. Valeu!',
+      createdAt: minutesAgo(72),
+    },
+    {
+      conversationId: convFabio.id,
+      sender: MessageSender.AGENT,
+      content:
+        'Excelente, Fábio! Fico feliz que tenha dado tudo certo. Se precisar de mais alguma ajuda de TI, é só me chamar. Tenha um ótimo dia!',
+      actions: ['atendimento concluído com sucesso'],
+      createdAt: minutesAgo(71),
     },
   ];
 
@@ -723,7 +755,7 @@ export async function runSeed(dataSource: DataSource) {
     status: ConversationStatus.CLOSED,
     agentPaused: true,
     messageCount: 4,
-    lastMessageAt: daysAgo(0),
+    lastMessageAt: minutesAgo(116),
   });
   await convRepo.save(convGabriela);
 
@@ -732,7 +764,7 @@ export async function runSeed(dataSource: DataSource) {
       conversationId: convGabriela.id,
       sender: MessageSender.USER,
       content: 'Qual o horário de atendimento do service desk hoje?',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(120),
     },
     {
       conversationId: convGabriela.id,
@@ -740,21 +772,21 @@ export async function runSeed(dataSource: DataSource) {
       content:
         'O horário do service desk é de segunda a sexta, das 8h às 18h. Para chamados críticos, temos plantão 24 horas.',
       actions: ['consultou artigo: Horário do service desk'],
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(119),
     },
     {
       conversationId: convGabriela.id,
       sender: MessageSender.USER,
       content: 'Ótimo, era só essa dúvida mesmo, muito obrigada!',
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(117),
     },
     {
       conversationId: convGabriela.id,
       sender: MessageSender.AGENT,
       content:
-        'Fico feliz em ter ajudado! Atendimento finalizado com sucesso. Se precisar de mais alguma coisa, basta iniciar uma nova conversa.',
+        'Por nada, Gabriela! Atendimento finalizado com sucesso. Conte sempre com o Nexo Assist!',
       actions: ['encerrou o atendimento'],
-      createdAt: daysAgo(0),
+      createdAt: minutesAgo(116),
     },
   ];
 

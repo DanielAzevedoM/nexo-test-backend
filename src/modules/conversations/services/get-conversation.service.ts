@@ -34,7 +34,7 @@ export class GetConversationService {
 
     const messages = await this.messageRepo.find({
       where: { conversationId: id },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC', id: 'ASC' },
       relations: ['decision'],
     });
 
